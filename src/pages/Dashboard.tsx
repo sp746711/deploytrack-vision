@@ -22,6 +22,7 @@ import { getProjects, createProject } from "@/api/projects";
 import { getDeployments } from "@/api/deployments";
 import { getIncidents } from "@/api/incidents";
 import { getCurrentUser } from "@/api/auth";
+import { asList, asObject } from "@/api/helpers";
 import { useToast } from "@/hooks/use-toast";
 
 interface Project {
@@ -69,38 +70,32 @@ const Dashboard = () => {
     setUser(userData);
   }, []);
 
-  // Fetch all data on component mount
+  // Fetch all data on component mount. Never crash; keep dashboard renderable with empty data.
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-
-        // Fetch projects
         const projectsRes = await getProjects();
-        setProjects(projectsRes.data);
+        const projectsList = asList(projectsRes);
+        setProjects(projectsList);
 
-        // Fetch incidents
         const incidentsRes = await getIncidents();
-        setIncidents(Array.isArray(incidentsRes.data) ? incidentsRes.data : []);
+        setIncidents(asList(incidentsRes));
 
-        // If projects exist, fetch deployments for the first project
-        if (projectsRes.data.length > 0) {
+        if (projectsList.length > 0 && projectsList[0]?._id) {
           try {
-            const deploymentsRes = await getDeployments(projectsRes.data[0]._id);
-            setDeployments(Array.isArray(deploymentsRes.data) ? deploymentsRes.data : []);
-          } catch (error) {
-            // Deployments might not exist yet, that's ok
+            const deploymentsRes = await getDeployments(projectsList[0]._id);
+            setDeployments(asList(deploymentsRes));
+          } catch {
             setDeployments([]);
           }
+        } else {
+          setDeployments([]);
         }
-      } catch (error: any) {
-        const errorMessage =
-          error.response?.data?.message || "Failed to fetch dashboard data";
-        toast({
-          title: "Error",
-          description: errorMessage,
-          variant: "destructive",
-        });
+      } catch (err: unknown) {
+        const e = err as { message?: string; response?: { data?: { message?: string } } };
+        const msg = e?.response?.data?.message ?? e?.message ?? "Failed to fetch dashboard data";
+        toast({ title: "Error", description: msg, variant: "destructive" });
       } finally {
         setLoading(false);
       }
@@ -127,26 +122,27 @@ const Dashboard = () => {
         name: newProjectName,
         description: newProjectDesc,
       });
-
-      setProjects([...projects, response.data]);
-
-      toast({
-        title: "Project Created",
-        description: `${newProjectName} has been created successfully.`,
-      });
-
-      // Reset form
-      setNewProjectName("");
-      setNewProjectDesc("");
-      setShowCreateModal(false);
-    } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || "Failed to create project";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      const created = asObject(response) ?? response?.data;
+      if (created && typeof created === "object") {
+        setProjects((prev) => [...prev, created]);
+        toast({
+          title: "Project Created",
+          description: `${newProjectName} has been created successfully.`,
+        });
+        setNewProjectName("");
+        setNewProjectDesc("");
+        setShowCreateModal(false);
+      } else {
+        toast({
+          title: "Error",
+          description: "Project created but invalid response. Refresh to see it.",
+          variant: "destructive",
+        });
+      }
+    } catch (err: unknown) {
+      const e = err as { message?: string; response?: { data?: { message?: string } } };
+      const msg = e?.response?.data?.message ?? e?.message ?? "Failed to create project";
+      toast({ title: "Error", description: msg, variant: "destructive" });
     } finally {
       setCreatingProject(false);
     }

@@ -13,20 +13,36 @@ export const signup = (data) =>
 export const login = (data) =>
   api.post("/auth/login", data);
 
-// Logout user (clear client-side data)
+// Logout user (clear client-side data). Never throws.
 export const logout = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+    }
+  } catch (_) {}
 };
 
 // Check if user is authenticated (has valid token)
 export const isAuthenticated = () => {
-  return !!localStorage.getItem("token");
+  try {
+    const t = typeof localStorage !== "undefined" ? localStorage.getItem("token") : null;
+    return !!(t && typeof t === "string" && t.trim());
+  } catch {
+    return false;
+  }
 };
 
-// Get currently logged-in user from localStorage
+// Get currently logged-in user from localStorage. Never throws on invalid JSON or missing localStorage.
 export const getCurrentUser = () => {
-  const userStr = localStorage.getItem("user");
-  return userStr ? JSON.parse(userStr) : null;
+  try {
+    if (typeof localStorage === "undefined") return null;
+    const userStr = localStorage.getItem("user");
+    if (!userStr) return null;
+    const parsed = JSON.parse(userStr);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
 };
 

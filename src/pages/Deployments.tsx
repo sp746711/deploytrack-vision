@@ -17,6 +17,7 @@ import {
 import { useState, useEffect } from "react";
 import { getDeployments } from "@/api/deployments";
 import { getProjects } from "@/api/projects";
+import { asList } from "@/api/helpers";
 import { useToast } from "@/hooks/use-toast";
 
 interface Deployment {
@@ -40,20 +41,20 @@ const Deployments = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Fetch projects on component mount
   useEffect(() => {
     const fetchProjects = async () => {
       try {
         const res = await getProjects();
-        setProjects(res.data);
-        // Select first project by default
-        if (res.data.length > 0) {
-          setSelectedProject(res.data[0]._id);
+        const list = asList(res);
+        setProjects(list);
+        if (list.length > 0 && list[0]?._id) {
+          setSelectedProject(list[0]._id);
         }
-      } catch (error: any) {
+      } catch (err: unknown) {
+        const e = err as { message?: string };
         toast({
           title: "Error",
-          description: "Failed to load projects",
+          description: e?.message ?? "Failed to load projects",
           variant: "destructive",
         });
       }
@@ -62,7 +63,6 @@ const Deployments = () => {
     fetchProjects();
   }, [toast]);
 
-  // Fetch deployments when selected project changes
   useEffect(() => {
     if (!selectedProject) return;
 
@@ -70,9 +70,8 @@ const Deployments = () => {
       try {
         setLoading(true);
         const res = await getDeployments(selectedProject);
-        setDeployments(Array.isArray(res.data) ? res.data : []);
-      } catch (error: any) {
-        // Handle error gracefully - might not have deployments yet
+        setDeployments(asList(res));
+      } catch {
         setDeployments([]);
       } finally {
         setLoading(false);

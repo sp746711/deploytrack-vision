@@ -16,6 +16,7 @@ import {
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { getIncidents } from "@/api/incidents";
+import { asList } from "@/api/helpers";
 import { useToast } from "@/hooks/use-toast";
 
 type Severity = "critical" | "warning" | "info";
@@ -39,17 +40,17 @@ const Incidents = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Fetch incidents on component mount
   useEffect(() => {
     const fetchIncidents = async () => {
       try {
         setLoading(true);
         const res = await getIncidents();
-        setIncidents(Array.isArray(res.data) ? res.data : []);
-      } catch (error: any) {
+        setIncidents(asList(res));
+      } catch (err: unknown) {
+        const e = err as { message?: string };
         toast({
           title: "Error",
-          description: "Failed to load incidents",
+          description: e?.message ?? "Failed to load incidents",
           variant: "destructive",
         });
         setIncidents([]);

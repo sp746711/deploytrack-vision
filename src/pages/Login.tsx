@@ -34,25 +34,30 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // Call login API
       const response = await login({ email, password });
+      const payload = response?.data ?? {};
+      const token = payload.token ?? response?.data?.token;
+      const user = payload.user ?? response?.data?.user;
 
-      // Store JWT token in localStorage
-      if (response.data.token) {
-        localStorage.setItem("token", response.data.token);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
-
+      if (token && user != null) {
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
         toast({
           title: "Login Successful",
           description: "Welcome back! Redirecting to dashboard...",
         });
-
-        // Redirect to dashboard after short delay
-        setTimeout(() => navigate("/dashboard"), 500);
+        setTimeout(() => navigate("/dashboard"), 300);
+      } else {
+        toast({
+          title: "Login Failed",
+          description: "Invalid response from server. Please try again.",
+          variant: "destructive",
+        });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string; response?: { data?: { message?: string } } };
       const errorMessage =
-        error.response?.data?.message || "Failed to login. Please check your credentials.";
+        err?.response?.data?.message ?? err?.message ?? "Failed to login. Please check your credentials.";
       toast({
         title: "Login Failed",
         description: errorMessage,

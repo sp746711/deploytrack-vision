@@ -10,14 +10,16 @@ interface PrivateRouteProps {
 }
 
 export const PrivateRoute = ({ children }: PrivateRouteProps) => {
-  // Check if user has a valid JWT token in localStorage
-  const token = localStorage.getItem("token");
+  let token: string | null = null;
+  try {
+    token = typeof localStorage !== "undefined" ? localStorage.getItem("token") : null;
+  } catch {
+    token = null;
+  }
 
-  // If no token exists, redirect to login
-  if (!token) {
+  if (!token || (typeof token === "string" && !token.trim())) {
     return <Navigate to="/login" replace />;
   }
 
-  // Token exists, allow access to protected route
   return <>{children}</>;
 };
