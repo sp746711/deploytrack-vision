@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { 
@@ -9,9 +9,12 @@ import {
   Terminal, 
   FolderKanban,
   Menu,
-  X
+  X,
+  LogOut,
+  User
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { logout, getCurrentUser } from "@/api/auth";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -23,8 +26,23 @@ const navItems = [
 
 export function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const isLanding = location.pathname === "/";
+
+  // Load user from localStorage on component mount
+  useEffect(() => {
+    const currentUser = getCurrentUser();
+    setUser(currentUser);
+  }, []);
+
+  // Handle logout
+  const handleLogout = () => {
+    logout();
+    setMobileMenuOpen(false);
+    navigate("/");
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50">
@@ -65,25 +83,39 @@ export function Navbar() {
 
             {/* CTA Buttons */}
             <div className="hidden md:flex items-center gap-3">
-              {isLanding ? (
+              {isLanding || !user ? (
                 <>
                   <Link to="/login">
                     <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
                       Sign In
                     </Button>
                   </Link>
-                  <Link to="/dashboard">
+                  <Link to="/signup">
                     <Button className="btn-glow bg-primary hover:bg-primary/90">
                       Get Started
                     </Button>
                   </Link>
                 </>
               ) : (
-                <Link to="/">
-                  <Button variant="ghost" size="sm">
-                    Home
+                <>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50">
+                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                      <User className="w-3 h-3 text-primary" />
+                    </div>
+                    <span className="text-sm font-medium truncate max-w-[100px]">
+                      {user?.name?.split(" ")[0] || "User"}
+                    </span>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={handleLogout}
+                    className="gap-2"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
                   </Button>
-                </Link>
+                </>
               )}
             </div>
 
@@ -102,7 +134,7 @@ export function Navbar() {
       {mobileMenuOpen && (
         <div className="md:hidden glass-card mx-4 mt-2 rounded-2xl border-none animate-fade-in">
           <div className="p-4 space-y-2">
-            {navItems.map((item) => {
+            {!isLanding && navItems.map((item) => {
               const isActive = location.pathname === item.href;
               return (
                 <Link
@@ -122,12 +154,31 @@ export function Navbar() {
               );
             })}
             <div className="pt-4 border-t border-border/50 space-y-2">
-              <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                <Button variant="outline" className="w-full">Sign In</Button>
-              </Link>
-              <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>
-                <Button className="w-full bg-primary">Get Started</Button>
-              </Link>
+              {!user ? (
+                <>
+                  <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="outline" className="w-full">Sign In</Button>
+                  </Link>
+                  <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
+                    <Button className="w-full bg-primary">Sign Up</Button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <div className="px-4 py-3 rounded-lg bg-muted/50 text-sm">
+                    <p className="font-medium">{user?.name}</p>
+                    <p className="text-xs text-muted-foreground">{user?.email}</p>
+                  </div>
+                  <Button 
+                    variant="destructive" 
+                    className="w-full gap-2"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

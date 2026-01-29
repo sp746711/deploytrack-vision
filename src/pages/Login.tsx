@@ -3,14 +3,65 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Rocket, Github, Mail } from "lucide-react";
 import { useState } from "react";
+import { login } from "@/api/auth";
+import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Handle login form submission
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validation
+    if (!email.trim() || !password) {
+      toast({
+        title: "Missing Credentials",
+        description: "Please enter both email and password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Call login API
+      const response = await login({ email, password });
+
+      // Store JWT token in localStorage
+      if (response.data.token) {
+        localStorage.setItem("token", response.data.token);
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+
+        toast({
+          title: "Login Successful",
+          description: "Welcome back! Redirecting to dashboard...",
+        });
+
+        // Redirect to dashboard after short delay
+        setTimeout(() => navigate("/dashboard"), 500);
+      }
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || "Failed to login. Please check your credentials.";
+      toast({
+        title: "Login Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="dark min-h-screen flex items-center justify-center p-6">
@@ -29,7 +80,7 @@ const Login = () => {
         </div>
 
         <GlassCard className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-          <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-6" onSubmit={handleLogin}>
             {/* Email Field */}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -44,6 +95,7 @@ const Login = () => {
                   onFocus={() => setFocusedField('email')}
                   onBlur={() => setFocusedField(null)}
                   className="pl-10 bg-muted/50 border-border/50 focus:border-primary transition-all"
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -66,13 +118,18 @@ const Login = () => {
                   onFocus={() => setFocusedField('password')}
                   onBlur={() => setFocusedField(null)}
                   className="bg-muted/50 border-border/50 focus:border-primary transition-all"
+                  disabled={loading}
                 />
               </div>
             </div>
 
             {/* Sign In Button */}
-            <Button type="submit" className="w-full btn-glow bg-primary hover:bg-primary/90">
-              Sign In
+            <Button 
+              type="submit" 
+              className="w-full btn-glow bg-primary hover:bg-primary/90"
+              disabled={loading}
+            >
+              {loading ? "Signing in..." : "Sign In"}
             </Button>
 
             {/* Divider */}
@@ -86,7 +143,11 @@ const Login = () => {
             </div>
 
             {/* Social Login */}
-            <Button variant="outline" className="w-full gap-2 border-border/50 hover:bg-muted/50">
+            <Button 
+              variant="outline" 
+              className="w-full gap-2 border-border/50 hover:bg-muted/50"
+              disabled={loading}
+            >
               <Github className="w-4 h-4" />
               Continue with GitHub
             </Button>

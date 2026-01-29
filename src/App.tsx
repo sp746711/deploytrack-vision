@@ -10,7 +10,9 @@ import Incidents from "./pages/Incidents";
 import Logs from "./pages/Logs";
 import Projects from "./pages/Projects";
 import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
+import { PrivateRoute } from "./components/PrivateRoute";
 
 const queryClient = new QueryClient();
 
@@ -21,14 +23,54 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          {/* Public Routes */}
           <Route path="/" element={<Index />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/deployments" element={<Deployments />} />
-          <Route path="/incidents" element={<Incidents />} />
-          <Route path="/logs" element={<Logs />} />
-          <Route path="/projects" element={<Projects />} />
           <Route path="/login" element={<Login />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/signup" element={<Signup />} />
+
+          {/* Protected Routes - Require authentication */}
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/deployments"
+            element={
+              <PrivateRoute>
+                <Deployments />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/incidents"
+            element={
+              <PrivateRoute>
+                <Incidents />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/logs"
+            element={
+              <PrivateRoute>
+                <Logs />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/projects"
+            element={
+              <PrivateRoute>
+                <Projects />
+              </PrivateRoute>
+            }
+          />
+
+          {/* Catch-all 404 route - MUST be last */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
